@@ -8,8 +8,8 @@
     <ProjectGuid>{C836D6AD-2A48-4FFF-A958-023C48A65478}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Console</RootNamespace>
-    <AssemblyName>Console</AssemblyName>
+    <RootNamespace>Frontend</RootNamespace>
+    <AssemblyName>Frontend</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <TargetFrameworkProfile>
     </TargetFrameworkProfile>

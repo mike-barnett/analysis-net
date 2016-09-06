@@ -275,5 +275,76 @@ namespace Backend.Utils
 
 			return result;
 		}
-	}
+
+        public static void RemoveAll<T>(this ICollection<T> self, IEnumerable<T> elements)
+        {
+            foreach (var element in elements)
+            {
+                self.Remove(element);
+            }
+        }
+
+        public static void SetRange<K, V>(this IDictionary<K, V> self, IEnumerable<KeyValuePair<K, V>> elements)
+        {
+            foreach (var element in elements)
+            {
+                self[element.Key] = element.Value;
+            }
+        }
+
+        public static IDictionary<K, V> Intersect<K, V>(this IDictionary<K, V> self, IEnumerable<KeyValuePair<K, V>> other, Func<V, V, V> valueIntersect)
+        {
+            var result = new Dictionary<K, V>();
+
+            foreach (var entry in other)
+            {
+                V value;
+
+                if (self.TryGetValue(entry.Key, out value))
+                {
+                    value = valueIntersect(value, entry.Value);
+
+                    if (value != null)
+                    {
+                        result.Add(entry.Key, value);
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        public static void IntersectWith<K, V>(this IDictionary<K, V> self, IEnumerable<KeyValuePair<K, V>> other, Func<V, V, V> valueIntersect)
+        {
+            var keys = new HashSet<K>();
+
+            foreach (var entry in other)
+            {
+                V value;
+
+                if (self.TryGetValue(entry.Key, out value))
+                {
+                    value = valueIntersect(value, entry.Value);
+
+                    if (value != null)
+                    {
+                        self[entry.Key] = value;
+                        keys.Add(entry.Key);
+                    }
+                    else
+                    {
+                        self.Remove(entry.Key);
+                    }
+                }
+            }
+
+            var keysToRemove = self.Keys.Except(keys).ToArray();
+
+            foreach (var key in keysToRemove)
+            {
+                self.Remove(key);
+            }
+        }
+
+    }
 }

@@ -75,7 +75,7 @@ namespace Backend.Analysis
 		public ISet<CFGNode> Successors { get; private set; }
 		public IList<Instruction> Instructions { get; private set; }
 		public CFGNode ImmediateDominator { get; set; }
-		public ISet<CFGNode> ImmediateDominated { get; private set; }
+		public ISet<CFGNode> Childs { get; private set; }
 		public ISet<CFGNode> DominanceFrontier { get; private set; }
 
 		public CFGNode(int id, CFGNodeKind kind = CFGNodeKind.BasicBlock)
@@ -87,7 +87,7 @@ namespace Backend.Analysis
 			this.Predecessors = new HashSet<CFGNode>();
 			this.Successors = new HashSet<CFGNode>();
 			this.Instructions = new List<Instruction>();
-			this.ImmediateDominated = new HashSet<CFGNode>();
+			this.Childs = new HashSet<CFGNode>();
 			this.DominanceFrontier = new HashSet<CFGNode>();
 		}
 
@@ -148,34 +148,34 @@ namespace Backend.Analysis
 			this.Entry = new CFGNode(0, CFGNodeKind.Entry);
 			this.Exit = new CFGNode(1, CFGNodeKind.Exit);
 			this.Nodes = new HashSet<CFGNode>() { this.Entry, this.Exit };
-			this.Loops = new HashSet<CFGLoop>();
 		}
 
-		public IEnumerable<CFGNode> Entries
-		{
-			get
-			{
-				var result = from node in this.Nodes
-							 where node.Predecessors.Count == 0
-							 select node;
 
-				return result;
-			}
-		}
+        public IEnumerable<CFGNode> Entries
+        {
+            get
+            {
+                var result = from node in this.Nodes
+                             where node.Predecessors.Count == 0
+                             select node;
 
-		public IEnumerable<CFGNode> Exits
-		{
-			get
-			{
-				var result = from node in this.Nodes
-							 where node.Successors.Count == 0
-							 select node;
+                return result;
+            }
+        }
 
-				return result;
-			}
-		}
+        public IEnumerable<CFGNode> Exits
+        {
+            get
+            {
+                var result = from node in this.Nodes
+                             where node.Successors.Count == 0
+                             select node;
 
-		public CFGNode[] ForwardOrder
+                return result;
+            }
+        }
+
+        public CFGNode[] ForwardOrder
 		{
 			get
 			{
@@ -225,8 +225,9 @@ namespace Backend.Analysis
 		private static IList<Instruction> FilterExceptionHandlers(MethodBody method)
 		{
 			var instructions = new List<Instruction>();
-			var handlers = method.ProtectedBlocks.Select(h => h.Handler).ToDictionary(h => h.Start);
-			var i = 0;
+            //var handlers = method.ProtectedBlocks.Select(h => h.Handler).ToDictionary(h => h.Start);
+            var handlers = method.ProtectedBlocks.ToDictionary(pb => pb.Handler.Start, h => h.Handler.End);
+            var i = 0;
 
 			while (i < method.Instructions.Count)
 			{
@@ -241,8 +242,9 @@ namespace Backend.Analysis
 						i++;
 						instruction = method.Instructions[i];
 					}
-					while (!instruction.Label.Equals(handler.End));
-				}
+                    //while (!instruction.Label.Equals(handler.End));
+                    while (!instruction.Label.Equals(handler));
+                }
 				else
 				{
 					instructions.Add(instruction);
@@ -413,79 +415,74 @@ namespace Backend.Analysis
 
 		//private static CFGNode[] ComputeForwardTopologicalSort(ControlFlowGraph cfg)
 		//{
-		//	var result = new CFGNode[cfg.Nodes.Count];
-		//	var visited = new bool[cfg.Nodes.Count];
-		//	var index = cfg.Nodes.Count - 1;
+		//    var result = new CFGNode[cfg.Nodes.Count];
+		//    var visited = new bool[cfg.Nodes.Count];
+		//    var index = cfg.Nodes.Count - 1;
 
-		//	foreach (var node in cfg.Entries)
-		//	{
-		//		ControlFlowGraph.DepthFirstSearch(result, visited, node, ref index);
-		//	}
+		//    ControlFlowGraph.DepthFirstSearch(result, visited, cfg.Entry, ref index);
 
-		//	return result;
+		//    //if (result.Any(n => n == null))
+		//    //{
+		//    //    var nodes = cfg.Nodes.Where(n => n.Predecessors.Count == 0);
+
+		//    //    throw new Exception("Error");
+		//    //}
+
+		//    return result;
 		//}
 
 		//private static void DepthFirstSearch(CFGNode[] result, bool[] visited, CFGNode node, ref int index)
 		//{
-		//	var alreadyVisited = visited[node.Id];
+		//    var alreadyVisited = visited[node.Id];
 
-		//	if (!alreadyVisited)
-		//	{
-		//		visited[node.Id] = true;
+		//    if (!alreadyVisited)
+		//    {
+		//        visited[node.Id] = true;
 
-		//		foreach (var succ in node.Successors)
-		//		{
-		//			ControlFlowGraph.DepthFirstSearch(result, visited, succ, ref index);
-		//		}
+		//        foreach (var succ in node.Successors)
+		//        {
+		//            ControlFlowGraph.DepthFirstSearch(result, visited, succ, ref index);
+		//        }
 
-		//		node.ForwardIndex = index;
-		//		result[index] = node;
-		//		index--;
-		//	}
+		//        node.ForwardIndex = index;
+		//        result[index] = node;
+		//        index--;
+		//    }
 		//}
-
-		private enum TopologicalSortNodeStatus
-		{
-			NeverVisited, // never pushed into stack
-			FirstVisit, // pushed into stack for the first time
-			SecondVisit // pushed into stack for the second time
-		}
 
 		private static CFGNode[] ComputeForwardTopologicalSort(ControlFlowGraph cfg)
 		{
 			// reverse postorder traversal from entry node
+			// status == 0: never pushed into stack
+			// status == 1: pushed into stack
+			// status == 2: visited once
 			var stack = new Stack<CFGNode>();
 			var result = new CFGNode[cfg.Nodes.Count];
-			var status = new TopologicalSortNodeStatus[cfg.Nodes.Count];
+			var status = new byte[cfg.Nodes.Count];
 			var index = cfg.Nodes.Count - 1;
 
-			foreach (var node in cfg.Entries)
-			{
-				stack.Push(node);
-				status[node.Id] = TopologicalSortNodeStatus.FirstVisit;
-			}
+			stack.Push(cfg.Entry);
+			status[cfg.Entry.Id] = 1;
 
 			do
 			{
 				var node = stack.Peek();
 				var node_status = status[node.Id];
 
-				if (node_status == TopologicalSortNodeStatus.FirstVisit)
+				if (node_status == 1)
 				{
-					status[node.Id] = TopologicalSortNodeStatus.SecondVisit;
+					status[node.Id] = 2;
 
 					foreach (var succ in node.Successors)
 					{
-						var succ_status = status[succ.Id];
-
-						if (succ_status == TopologicalSortNodeStatus.NeverVisited)
+						if (status[succ.Id] == 0)
 						{
 							stack.Push(succ);
-							status[succ.Id] = TopologicalSortNodeStatus.FirstVisit;
+							status[succ.Id] = 1;
 						}
 					}
 				}
-				else if (node_status == TopologicalSortNodeStatus.SecondVisit)
+				else if (node_status == 2)
 				{
 					stack.Pop();
 					node.ForwardIndex = index;
@@ -501,38 +498,42 @@ namespace Backend.Analysis
 		private static CFGNode[] ComputeBackwardTopologicalSort(ControlFlowGraph cfg)
 		{
 			// reverse postorder traversal from exit node
+			// status == 0: never pushed into stack
+			// status == 1: pushed into stack
+			// status == 2: visited once
 			var stack = new Stack<CFGNode>();
 			var result = new CFGNode[cfg.Nodes.Count];
-			var status = new TopologicalSortNodeStatus[cfg.Nodes.Count];
+			var status = new byte[cfg.Nodes.Count];
 			var index = cfg.Nodes.Count - 1;
 
-			foreach (var node in cfg.Exits)
-			{
-				stack.Push(node);
-				status[node.Id] = TopologicalSortNodeStatus.FirstVisit;
-			}
+            //stack.Push(cfg.Exit);
+            //status[cfg.Exit.Id] = 1;
+
+            foreach (var node in cfg.Exits)
+            {
+                stack.Push(node);
+                status[node.Id] = 1;
+            }
 
 			do
 			{
 				var node = stack.Peek();
 				var node_status = status[node.Id];
 
-				if (node_status == TopologicalSortNodeStatus.FirstVisit)
+				if (node_status == 1)
 				{
-					status[node.Id] = TopologicalSortNodeStatus.SecondVisit;
+					status[node.Id] = 2;
 
 					foreach (var pred in node.Predecessors)
 					{
-						var pred_status = status[pred.Id];
-
-						if (pred_status == TopologicalSortNodeStatus.NeverVisited)
+						if (status[pred.Id] == 0)
 						{
 							stack.Push(pred);
-							status[pred.Id] = TopologicalSortNodeStatus.FirstVisit;
+							status[pred.Id] = 1;
 						}
 					}
 				}
-				else if (node_status == TopologicalSortNodeStatus.SecondVisit)
+				else if (node_status == 2)
 				{
 					stack.Pop();
 					node.BackwardIndex = index;
@@ -542,7 +543,7 @@ namespace Backend.Analysis
 			}
 			while (stack.Count > 0);
 
-			return result;
+            return result;
 		}
 
 		#endregion
@@ -560,27 +561,31 @@ namespace Backend.Analysis
 			{
 				changed = false;
 
-				// Skip first node: entry
-				for (var i = 1; i < sorted_nodes.Length; ++i)
-				{
-					var node = sorted_nodes[i];
-					var predecessors = node.Predecessors.Where(p => p.ImmediateDominator != null);
-					var new_idom = predecessors.First();
-					predecessors = predecessors.Skip(1);
+                // Skip first node: entry
+                for (var i = 1; i < sorted_nodes.Length; ++i)
+                {
+                    var node = sorted_nodes[i];
+                    var predecessors = node.Predecessors.Where(p => p.ImmediateDominator != null);
 
-					foreach (var pred in predecessors)
-					{
-						new_idom = ControlFlowGraph.FindCommonAncestor(pred, new_idom);
-					}
+                    if (predecessors.Any()) { 
 
-					var old_idom = node.ImmediateDominator;
-					var equals = old_idom != null && old_idom.Equals(new_idom);
+                        var new_idom = predecessors.First();
+                        predecessors = predecessors.Skip(1);
 
-					if (!equals)
-					{
-						node.ImmediateDominator = new_idom;
-						changed = true;
-					}
+                        foreach (var pred in predecessors)
+                        {
+                            new_idom = ControlFlowGraph.FindCommonAncestor(pred, new_idom);
+                        }
+
+                        var old_idom = node.ImmediateDominator;
+                        var equals = old_idom != null && old_idom.Equals(new_idom);
+
+                        if (!equals)
+                        {
+                            node.ImmediateDominator = new_idom;
+                            changed = true;
+                        }
+                    }
 				}
 			}
 			while (changed);
@@ -666,7 +671,7 @@ namespace Backend.Analysis
 			{
 				if (node.ImmediateDominator == null) continue;
 
-				node.ImmediateDominator.ImmediateDominated.Add(node);
+				node.ImmediateDominator.Childs.Add(node);
 			}
 		}
 
@@ -689,7 +694,7 @@ namespace Backend.Analysis
 				{
 					var runner = pred;
 
-					while (runner.Id != node.ImmediateDominator.Id)
+                    while (runner != null && runner.Id != node.ImmediateDominator.Id)
 					{
 						runner.DominanceFrontier.Add(node);
 						runner = runner.ImmediateDominator;

@@ -241,13 +241,24 @@ namespace Backend.ThreeAddressCode.Values
 			if (object.ReferenceEquals(this, obj)) return true;
 			var other = obj as Constant;
 
-			return other != null &&
-				this.Value.Equals(other.Value);
+            if (other == null) return false;
+
+            if (other.Value == null && this.Value == null) return true;
+            if (other.Value == null || this.Value == null) return false;
+
+			return this.Value.Equals(other.Value);
 		}
 
 		public override int GetHashCode()
 		{
-			return this.Value.GetHashCode();
+            if (this.Value == null)
+            {
+                return 0;
+            }
+            else
+            {
+                return this.Value.GetHashCode();
+            }
 		}
 
 		public override string ToString()

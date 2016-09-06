@@ -7,7 +7,7 @@ using System.Text;
 using Microsoft.Cci;
 using Backend;
 
-namespace Console
+namespace Frontend
 {
 	class Program
 	{

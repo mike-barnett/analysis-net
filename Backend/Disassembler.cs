@@ -784,7 +784,7 @@ namespace Backend
 					//    break;
 
 					default:
-						System.Console.WriteLine("Unknown bytecode: {0}", op.OperationCode);
+						//System.Console.WriteLine("Unknown bytecode: {0}", op.OperationCode);
 						//throw new UnknownBytecodeException(bb, op);
 						break;
 				}

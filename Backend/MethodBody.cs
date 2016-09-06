@@ -54,7 +54,8 @@ namespace Backend
 
 				if (variable.Type != null)
 				{
-					type = TypeHelper.GetTypeName(variable.Type);
+
+                    type = TypeHelper.GetTypeName(variable.Type);
 				}
 
 				result.AppendFormat("  {0} {1};", type, variable.Name);

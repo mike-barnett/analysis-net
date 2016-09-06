@@ -8,7 +8,7 @@ using System.IO;
 using Microsoft.Cci;
 using Microsoft.Cci.MutableCodeModel;
 
-namespace Console
+namespace Frontend
 {
 	public class Assembly : IDisposable
 	{

@@ -11,7 +11,7 @@ using Backend.Analysis;
 using Backend.Serialization;
 using Backend.ThreeAddressCode;
 
-namespace Console
+namespace Frontend
 {
 	class MethodVisitor : MetadataRewriter
 	{

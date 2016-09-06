@@ -37,7 +37,34 @@ namespace Backend.Analysis
 			//this.method.UpdateVariables();
 		}
 
-		private void InsertPhiInstructions()
+        public void Prune(LiveVariablesAnalysis liveVariables)
+        {
+            foreach (var node in cfg.Nodes)
+            {
+                var result = liveVariables.Result[node.Id];
+                var input = result.Input.ToSet();
+                var phiInstructions = node.Instructions.OfType<PhiInstruction>().ToArray();
+
+                foreach (var phi in phiInstructions)
+                {
+                    var isLive = input.Contains(phi.Result);
+
+                    if (!isLive && phi.Result is DerivedVariable)
+                    {
+                        var derived = phi.Result as DerivedVariable;
+                        isLive = input.Contains(derived.Original);
+                    }
+
+                    if (!isLive)
+                    {
+                        // TODO: Also remove phi instructions from method's body instructions collection.
+                        node.Instructions.Remove(phi);
+                    }
+                }
+            }
+        }
+
+        private void InsertPhiInstructions()
 		{
 			var defining_nodes = new Dictionary<IVariable, ISet<CFGNode>>();
 
@@ -196,7 +223,7 @@ namespace Backend.Analysis
 				}
 			}
 
-			foreach (var child in node.ImmediateDominated)
+			foreach (var child in node.Childs)
 			{
 				this.RenameVariables(child, derived_variables, indices);
 			}
