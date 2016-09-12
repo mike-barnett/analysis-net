@@ -13,7 +13,7 @@ using Backend.ThreeAddressCode;
 
 namespace Frontend
 {
-	class MethodVisitor : MetadataRewriter
+	public class MethodVisitor : MetadataRewriter
 	{
 		private ISourceLocationProvider sourceLocationProvider;
 
@@ -67,7 +67,7 @@ namespace Frontend
 			methodBody.UpdateVariables();
 
 			////var dot = DOTSerializer.Serialize(cfg);
-			var dgml = DGMLSerializer.Serialize(cfg);
+			////var dgml = DGMLSerializer.Serialize(cfg);
 			
 			return base.Rewrite(methodDefinition);
 		}

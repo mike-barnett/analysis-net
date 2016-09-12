@@ -1,16 +1,12 @@
 ﻿// Copyright (c) Edgardo Zoppi.  All Rights Reserved.  Licensed under the MIT License.  See License.txt in the project root for license information.
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.IO;
 using Microsoft.Cci;
-using Microsoft.Cci.MutableCodeModel;
 
 namespace Frontend
 {
-	public class Assembly : IDisposable
+    public class Assembly : IDisposable
 	{
 		public string FileName { get; private set; }
 		public bool IsLoaded { get; private set; }
@@ -44,8 +40,6 @@ namespace Frontend
 				using (var pdbStream = File.OpenRead(pdbFileName))
 					this.PdbReader = new PdbReader(pdbStream, this.Host);
 			}
-
-			this.Module = MetadataCopier.DeepCopy(this.Host, this.Module);
 
 			this.FileName = fileName;
 			this.IsLoaded = true;
